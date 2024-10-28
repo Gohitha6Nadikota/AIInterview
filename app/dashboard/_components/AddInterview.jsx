@@ -60,7 +60,6 @@ function AddInterview() {
     setResponse(resp);
 
     if (resp) {
-      console.log("Response at first page " + resp);
       const dbresp = await db
         .insert(MockInterview)
         .values({

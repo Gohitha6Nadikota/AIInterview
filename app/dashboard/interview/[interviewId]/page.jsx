@@ -24,7 +24,6 @@ const Interview = ({ params }) => {
         .where(eq(MockInterview.mockId, params.interviewId));
 
       setInterviewData(data[0]);
-      console.log("Data " + data[0]);
     } catch (error) {
       console.error("Error fetching interview data:", error);
     }

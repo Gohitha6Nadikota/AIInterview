@@ -4,7 +4,6 @@ import React, { useEffect } from "react";
 
 const QuestionSection = ({ mockData, active }) => {
   useEffect(() => {
-    console.log(mockData);
   }, [mockData]);
   const textToSpeech = (text) => {
     if ("speechSynthesis" in window) {
@@ -33,10 +32,11 @@ const QuestionSection = ({ mockData, active }) => {
 
       <h2 className="my-5 text-md md:text-lg flex text-[#0d92f4]">
         <Volume2
-          className="mx-2 text-[#0d92f4]"
-          onClick={() => textToSpeech(mockData[active]?.Question)}
+          size={44}
+          className="mx-2 text-[#0d92f4] text-xl hover:cursor-pointer"
+          onClick={() => textToSpeech(mockData[active]?.question)}
         />
-        <h2 className="text-black">{mockData[active]?.Question}</h2>
+        <h2 className="text-black">{mockData[active]?.question}</h2>
       </h2>
       <div className="border rounded-lg p-5 bg-blue-100 mt-20">
         <h2 className="flex gap-2 items-center text-primary">

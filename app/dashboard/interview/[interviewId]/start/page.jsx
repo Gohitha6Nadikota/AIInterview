@@ -24,9 +24,7 @@ const StartInterview = ({ params }) => {
         .where(eq(MockInterview.mockId, params.interviewId));
       const resp = JSON.parse(data[0].jsonMockResp);
       setMockData(resp);
-      console.log('MockData '+resp);
       setInterviewData(data[0]);
-      console.log('InterviewData '+data[0])
     } catch (error) {
       console.error("Error fetching interview data:", error);
     }
