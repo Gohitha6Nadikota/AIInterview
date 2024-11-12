@@ -50,7 +50,8 @@ const Feedback = ({ params }) => {
             {feedbackList.map((item, index) => (
               <Collapsible key={index}>
                 <CollapsibleTrigger className="p-2 bg-secondary w-full rounded-lg my-2 gap-7 flex justify-between text-left">
-                  {"🤔" +item.question} <ChevronsDownUpIcon className="h-5 w-5" />
+                  {"🤔" + item.question}{" "}
+                  <ChevronsDownUpIcon className="h-5 w-5" />
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="flex flex-col gap-2">
@@ -58,10 +59,10 @@ const Feedback = ({ params }) => {
                       <strong>Rating:</strong> {item.rating}
                     </h2>
                     <h2 className="p-2 border rounded-lg bg-red-50 text-sm text-red-900">
-                      <strong>Your Answer:</strong> {item.UserAns}
+                      <strong>Your Answer:</strong> {item.userAns}
                     </h2>
                     <h2 className="p-2 border rounded-lg bg-green-50 text-sm text-green-900">
-                      <strong>Correct Answer:</strong> {item.correctAns}
+                      <strong>Sample Correct Answer:</strong> {item.correctAns}
                     </h2>
                     <h2 className="p-2 border rounded-lg bg-blue-50 text-sm text-blue-900">
                       <strong>Feedback:</strong> {item.feedback}

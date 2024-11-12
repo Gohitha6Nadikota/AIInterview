@@ -3,8 +3,7 @@ import { Lightbulb, Volume2 } from "lucide-react";
 import React, { useEffect } from "react";
 
 const QuestionSection = ({ mockData, active }) => {
-  useEffect(() => {
-  }, [mockData]);
+  useEffect(() => {}, [mockData]);
   const textToSpeech = (text) => {
     if ("speechSynthesis" in window) {
       const speech = new SpeechSynthesisUtterance(text);

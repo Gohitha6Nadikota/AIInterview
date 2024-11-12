@@ -16,8 +16,6 @@ const RecordSection = ({ mockData, active, interviewData }) => {
   const [loading, setLoading] = useState(false);
   const { user } = useUser();
   const {
-    error,
-    interimResult,
     isRecording,
     results,
     setResults,
@@ -29,6 +27,7 @@ const RecordSection = ({ mockData, active, interviewData }) => {
   });
   useEffect(() => {
     if (results.length > 0) {
+      console.log(results + " results");
       setAnswer(
         (prevAnswer) =>
           prevAnswer + " " + results[results.length - 1].transcript
@@ -40,20 +39,22 @@ const RecordSection = ({ mockData, active, interviewData }) => {
     if (!isRecording && answer.length > 10) UpdateAnswer();
   }, [answer]);
 
-  const saveAnswer = async () => {
+  const saveAnswer = () => {
     if (isRecording) {
       stopSpeechToText();
       if (!mockData || !mockData[active]) {
         toast("Error: Question data is missing.");
+        setAnswer("");
+        setResults([]);
         return;
       }
       if (answer?.length < 10) {
         setLoading(false);
-        toast("Error while saving your answer, PLease record again");
+        toast("Error while saving your answer, Please record again");
+        setAnswer("");
+        setResults([]);
         return;
       }
-      setAnswer("");
-      setResults([]);
     } else {
       startSpeechToText();
     }
@@ -61,17 +62,18 @@ const RecordSection = ({ mockData, active, interviewData }) => {
 
   const UpdateAnswer = async () => {
     setLoading(true);
+    //console.log("Update answer ka answer " + answer);
     const prompt =
       "Question:" +
       mockData[active]?.question +
       ",User Answer" +
       answer +
-      ",Depends on question and user answer for given question Please give us rating for answer and effdback as area of improvement if any" +
+      ",Depends on question and user answer for given question Please give us rating for answer and feedback as area of improvement if any" +
       "in just 3 to 5 lines to improve it in JSON format with rating field and feedback field";
 
     const result = await chatSession.sendMessage(prompt);
 
-    const resp = result.response
+    const resp = await result.response
       .text()
       .replace("```json", "")
       .replace("```", "");
@@ -86,7 +88,7 @@ const RecordSection = ({ mockData, active, interviewData }) => {
       userEmail: user?.primaryEmailAddress?.emailAddress,
       createdAt: moment().format("DD-MM-YYYY"),
     });
-
+    console.log(answer + " data in db");
     if (dbresp) {
       toast("User Answer recorded successfully");
     }

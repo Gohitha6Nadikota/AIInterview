@@ -51,7 +51,7 @@ function AddInterview() {
       desc +
       ",Years of Experience: " +
       exp +
-      ", Depends on this information please give me 5 Interview question with Answered in Json Format, Give Question and Answered as field in JSON";
+      ", Depends on this information please give me 5 Interview question with Answered in Json Format, Give Question and Answered as field in JSON. Dont give any additional data or comments in the response only i need the json. Question to be tagged as 'question' and answer as 'answer'";
     const result = await chatSession.sendMessage(input);
     const resp = result.response
       .text()
