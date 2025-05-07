@@ -2,16 +2,18 @@
 import React, { useEffect, useState } from "react";
 import { eq } from "drizzle-orm";
 import { db } from "@/utils/db";
-import { MockInterview } from "@/utils/schema";
+import { MockInterview, UserAnswer } from "@/utils/schema";
 import QuestionSection from "./_components/QuestionSection";
 import RecordSection from "./_components/RecordSection";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const StartInterview = ({ params }) => {
   const [interviewData, setInterviewData] = useState(null);
   const [mockData, setMockData] = useState(null);
   const [active, setActive] = useState(0);
+  const router = useRouter();
+
   useEffect(() => {
     GetInterviewDetails();
   }, []);
@@ -27,6 +29,32 @@ const StartInterview = ({ params }) => {
       setInterviewData(data[0]);
     } catch (error) {
       console.error("Error fetching interview data:", error);
+    }
+  };
+
+  const handleEndInterview = async () => {
+    let attempts = 0;
+    let feedbackReady = false;
+
+    while (attempts < 10 && !feedbackReady) {
+      const res = await db
+        .select()
+        .from(UserAnswer)
+        .where(eq(UserAnswer.mockIdRef, interviewData.mockId));
+
+      if (res.length > 0) {
+        feedbackReady = true;
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // wait 1s
+      attempts++;
+    }
+
+    if (feedbackReady) {
+      router.push(`/dashboard/interview/${interviewData.mockId}/feedback`);
+    } else {
+      alert("Feedback generation timed out. Try again later.");
     }
   };
 
@@ -46,17 +74,10 @@ const StartInterview = ({ params }) => {
             {active > 0 && (
               <Button onClick={() => setActive(active - 1)}>Previous</Button>
             )}
-            {active != mockData.length - 1 && (
+            {active !== mockData.length - 1 ? (
               <Button onClick={() => setActive(active + 1)}>Next</Button>
-            )}
-            {active == mockData.length - 1 && (
-              <Link
-                href={
-                  "/dashboard/interview/" + interviewData?.mockId + "/feedback"
-                }
-              >
-                <Button>End Interview</Button>
-              </Link>
+            ) : (
+              <Button onClick={handleEndInterview}>End Interview</Button>
             )}
           </div>
         </>

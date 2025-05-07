@@ -49,6 +49,7 @@ const RecordSection = ({ mockData, active, interviewData }) => {
         return;
       }
       if (answer?.length < 10) {
+        console.log(answer + " answer length is less than 10");
         setLoading(false);
         toast("Error while saving your answer, Please record again");
         setAnswer("");
@@ -62,7 +63,6 @@ const RecordSection = ({ mockData, active, interviewData }) => {
 
   const UpdateAnswer = async () => {
     setLoading(true);
-    //console.log("Update answer ka answer " + answer);
     const prompt =
       "Question:" +
       mockData[active]?.question +

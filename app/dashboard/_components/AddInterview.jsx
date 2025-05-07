@@ -28,14 +28,13 @@ function AddInterview() {
   const { user } = useUser();
   const router = useRouter();
 
-  let isFormValid = role && desc && exp;
+  const isFormValid =
+    role.trim() !== "" && desc.trim() !== "" && exp.trim() !== "";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!role || !desc || !exp) {
-      isFormValid = false;
-    }
-    if (isFormValid == false) {
+
+    if (!isFormValid) {
       alert(
         "Please fill out all fields and make sure experience is a positive number."
       );
@@ -52,6 +51,7 @@ function AddInterview() {
       ",Years of Experience: " +
       exp +
       ", Depends on this information please give me 5 Interview question with Answered in Json Format, Give Question and Answered as field in JSON. Dont give any additional data or comments in the response only i need the json. Question to be tagged as 'question' and answer as 'answer'";
+
     const result = await chatSession.sendMessage(input);
     const resp = result.response
       .text()
@@ -81,6 +81,7 @@ function AddInterview() {
     } else {
       console.log("Error in getting response from AI");
     }
+
     setLoading(false);
   };
 
@@ -115,7 +116,7 @@ function AddInterview() {
                     <Input
                       placeholder="Ex. Full Stack Developer"
                       className="text-sm p-3 border border-[#0D92F4]"
-                      required={true}
+                      required
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
                     />
@@ -127,7 +128,7 @@ function AddInterview() {
                     </label>
                     <Input
                       placeholder="Ex. React, Mysql, NodeJs"
-                      required={true}
+                      required
                       value={desc}
                       className="text-sm p-3 border border-[#0D92F4]"
                       onChange={(e) => setDesc(e.target.value)}
@@ -141,9 +142,9 @@ function AddInterview() {
                     <Input
                       placeholder="Ex. 5"
                       type="number"
-                      required={true}
+                      required
                       value={exp}
-                      className="text-sm p-3  border border-[#0D92F4]"
+                      className="text-sm p-3 border border-[#0D92F4]"
                       onChange={(e) => setExp(e.target.value)}
                     />
                   </div>
@@ -159,12 +160,16 @@ function AddInterview() {
                   </Button>
                   <Button
                     type="submit"
-                    className={`"bg-[#b2ce63]" ${
-                      !isFormValid || loading ? "bg-[#b2ce63]" : "bg-[#0D92F4]"
-                    }text-xl`}
-                    disabled={!isFormValid || loading}
+                    className={`${
+                      !isFormValid ? "bg-[#b2ce63]" : "bg-[#0D92F4]"
+                    } text-xl`}
+                    disabled={!isFormValid}
                   >
-                    {loading ? <LoaderCircleIcon /> : "Start Interview"}
+                    {loading ? (
+                      <LoaderCircleIcon className="animate-spin" />
+                    ) : (
+                      "Start Interview"
+                    )}
                   </Button>
                 </div>
               </form>

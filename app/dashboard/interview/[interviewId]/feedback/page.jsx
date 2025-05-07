@@ -30,6 +30,16 @@ const Feedback = ({ params }) => {
     setFeedbackList(res);
   };
 
+  const calculateAverageRating = () => {
+    if (feedbackList.length === 0) return 0;
+    const total = feedbackList.reduce(
+      (acc, item) => acc + (item.rating || 0),
+      0
+    );
+    const normalized = (total / 25)*10;
+    return normalized.toFixed(1);
+  };
+
   return (
     <div className="p-10">
       <div className="bg-white text-black p-5 rounded-lg">
@@ -42,7 +52,8 @@ const Feedback = ({ params }) => {
               Here is your Interview Feedback
             </h2>
             <h2 className="text-blue-600 text-lg my-3 p-2">
-              ⭐Your overall interview rating: <strong>7/10</strong>
+              ⭐Your overall interview rating:{" "}
+              <strong>{calculateAverageRating()}/10</strong>
             </h2>
             <h2 className="text-xl text-gray-500 mb-2">
               Find below the feedback and areas of improvement for all questions

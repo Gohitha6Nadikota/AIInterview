@@ -1,6 +1,7 @@
 "use client";
 import { Lightbulb, Volume2 } from "lucide-react";
 import React, { useEffect } from "react";
+import { toast } from "sonner";
 
 const QuestionSection = ({ mockData, active }) => {
   useEffect(() => {}, [mockData]);
@@ -9,7 +10,7 @@ const QuestionSection = ({ mockData, active }) => {
       const speech = new SpeechSynthesisUtterance(text);
       window.speechSynthesis.speak(speech);
     } else {
-      alert("Sorry, your browser does not support Text to Speech");
+      toast("Sorry, your browser does not support Text to Speech");
     }
   };
   return (

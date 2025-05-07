@@ -1,3 +1,4 @@
+'use client';
 import React from "react";
 import AddInterview from "./_components/AddInterview";
 import Interviews from "./_components/Interviews";
