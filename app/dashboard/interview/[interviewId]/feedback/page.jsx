@@ -11,7 +11,7 @@ import {
 import { eq } from "drizzle-orm";
 import { ChevronsDownUpIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Button } from "@mui/material";
+import { Button } from "@/components/ui/button";
 
 const Feedback = ({ params }) => {
   const [feedbackList, setFeedbackList] = useState([]);
@@ -85,11 +85,11 @@ const Feedback = ({ params }) => {
         )}
       </div>
 
+
       <Button
+        type="button"
         onClick={() => router.replace("/dashboard")}
-        variant="contained"
-        color="primary"
-        className="mt-5"
+        className="bg-[#0D92F4] text-lg mt-5"
       >
         Go to Home
       </Button>

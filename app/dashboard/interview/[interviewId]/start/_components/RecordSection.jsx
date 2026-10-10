@@ -60,39 +60,46 @@ const RecordSection = ({ mockData, active, interviewData }) => {
   };
 
   const UpdateAnswer = async () => {
-    setLoading(true);
-    const prompt =
-      "Question:" +
-      mockData[active]?.question +
-      ",User Answer" +
-      answer +
-      ",Depends on question and user answer for given question Please give us rating for answer and feedback as area of improvement if any" +
-      "in just 3 to 5 lines to improve it in JSON format with a numeric rating from 1 to 10 and a feedback field";
+    try {
+      setLoading(true);
+      toast.info("Please wait till your response is saved", { duration: 3000 });
+      const prompt =
+        "Question:" +
+        mockData[active]?.question +
+        ",User Answer" +
+        answer +
+        ",Depends on question and user answer for given question Please give us rating for answer and feedback as area of improvement if any" +
+        "in just 3 to 5 lines to improve it in JSON format with a numeric rating from 1 to 10 and a feedback field";
 
-    const result = await chatSession.sendMessage(prompt);
+      const result = await chatSession.sendMessage(prompt);
 
-    const resp = await result.response
-      .text()
-      .replace("```json", "")
-      .replace("```", "");
-    const jresp = JSON.parse(resp);
-    const dbresp = await db.insert(UserAnswer).values({
-      mockIdRef: interviewData?.mockId,
-      question: mockData[active]?.question,
-      correctAns: mockData[active]?.answer,
-      userAns: answer,
-      feedback: jresp?.feedback,
-      rating: jresp?.rating,
-      userEmail: user?.primaryEmailAddress?.emailAddress,
-      createdAt: moment().format("DD-MM-YYYY"),
-    });
-    console.log(answer + " data in db");
-    if (dbresp) {
-      toast("User Answer recorded successfully");
+      const resp = await result.response
+        .text()
+        .replace("```json", "")
+        .replace("```", "");
+      const jresp = JSON.parse(resp);
+      const dbresp = await db.insert(UserAnswer).values({
+        mockIdRef: interviewData?.mockId,
+        question: mockData[active]?.question,
+        correctAns: mockData[active]?.answer,
+        userAns: answer,
+        feedback: jresp?.feedback,
+        rating: jresp?.rating,
+        userEmail: user?.primaryEmailAddress?.emailAddress,
+        createdAt: moment().format("DD-MM-YYYY"),
+      });
+      console.log(answer + " data in db");
+      if (dbresp) {
+        toast.success("User Answer recorded successfully", { duration: 3000 });
+      }
+      setAnswer("");
+      setResults([]);
+      setLoading(false);
     }
-    setAnswer("");
-    setResults([]);
-    setLoading(false);
+    catch (e) {
+      toast.warning("Failed saving response, please try again .", { duration: 3000, });
+      setLoading(false);
+    }
   };
   return (
     <div className="flex items-center justify-center flex-col">
