@@ -14,7 +14,7 @@ const {
   const genAI = new GoogleGenerativeAI(apiKey);
   
   const model = genAI.getGenerativeModel({
-    model: process.env.NEXT_PUBLIC_GEMINI_MODEL || "gemini-2.0-flash",
+    model: process.env.NEXT_PUBLIC_GEMINI_MODEL || "gemini-3.8-flash",
   });
   
   const generationConfig = {
