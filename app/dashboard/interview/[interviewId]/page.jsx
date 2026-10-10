@@ -1,8 +1,6 @@
 "use client";
-import { eq } from "drizzle-orm";
-import { MockInterview } from "@/utils/schema";
 import React, { useEffect, useState } from "react";
-import { db } from "@/utils/db";
+import { getInterview } from "@/utils/actions";
 import Webcam from "react-webcam";
 import { Lightbulb, WebcamIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +8,7 @@ import Link from "next/link";
 
 const Interview = ({ params }) => {
   const [interviewData, setInterviewData] = useState(null);
+  const [notFound, setNotFound] = useState(false);
   const [webcamEnabled, setWebCamEnabled] = useState(false);
 
   useEffect(() => {
@@ -18,16 +17,20 @@ const Interview = ({ params }) => {
 
   const GetInterviewDetails = async () => {
     try {
-      const data = await db
-        .select()
-        .from(MockInterview)
-        .where(eq(MockInterview.mockId, params.interviewId));
-
-      setInterviewData(data[0]);
+      const interview = await getInterview(params.interviewId);
+      if (!interview) {
+        setNotFound(true);
+        return;
+      }
+      setInterviewData(interview);
     } catch (error) {
       console.error("Error fetching interview data:", error);
     }
   };
+
+  if (notFound) {
+    return <p className="p-10">Interview not found.</p>;
+  }
 
   return (
     <div className="flex items-center flex-col justify-center min-h-[91vh]">
@@ -63,7 +66,7 @@ const Interview = ({ params }) => {
             </h2>
             <h2 className="mt-3 text-yellow-600">
               Enable Video Web Cam and Microphone to Start your AI Mock
-              Interview. It has 5 questions which you can answer and at last
+              Interview. It has {interviewData?.questions.length ?? 0} questions which you can answer and at last
               you'll get the report of your performance.
             </h2>
             <h2 className="mt-3 text-yellow-600">
@@ -80,7 +83,6 @@ const Interview = ({ params }) => {
               style={{
                 height: 300,
                 width: 300,
-                text: "black",
               }}
             />
           ) : (
@@ -97,9 +99,11 @@ const Interview = ({ params }) => {
         </div>
       </div>
       <div className="flex items-end justify-end mt-10 pb-4">
-        <Link href={"/dashboard/interview/" + params.interviewId + "/start"}>
-          <Button className="bg-[#0d92f4] text-lg">Start Interview</Button>
-        </Link>
+        {interviewData && (
+          <Link href={"/dashboard/interview/" + params.interviewId + "/start"}>
+            <Button className="bg-[#0d92f4] text-lg">Start Interview</Button>
+          </Link>
+        )}
       </div>
     </div>
   );

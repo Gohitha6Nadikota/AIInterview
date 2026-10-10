@@ -1,21 +1,32 @@
 "use client";
 import { toast } from "sonner";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Webcam from "react-webcam";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import useSpeechToText from "react-hook-speech-to-text";
-import { Mic, StopCircle } from "lucide-react";
-import { chatSession } from "@/utils/ai";
-import { UserAnswer } from "@/utils/schema";
-import { useUser } from "@clerk/nextjs";
-import { db } from "@/utils/db";
-import moment from "moment";
-const RecordSection = ({ mockData, active, interviewData }) => {
-  const [answer, setAnswer] = useState("");
-  const [loading, setLoading] = useState(false);
-  const { user } = useUser();
+import { LoaderCircleIcon, Mic, RotateCcw, StopCircle } from "lucide-react";
+import { saveAnswer } from "@/utils/actions";
+
+const MIN_ANSWER_LENGTH = 10;
+const MIC_START_TIMEOUT_MS = 6000;
+
+const PHASE = {
+  IDLE: "idle",
+  STARTING: "starting",
+  RECORDING: "recording",
+  SAVING: "saving",
+  FAILED: "failed",
+};
+
+const RecordSection = ({ questions, active, mockId, onBusyChange }) => {
+  const [phase, setPhase] = useState(PHASE.IDLE);
+  const [pendingAnswer, setPendingAnswer] = useState(null);
+  const recordingQuestionRef = useRef(null);
+  const startTimerRef = useRef(null);
+
   const {
+    error: speechError,
     isRecording,
     results,
     setResults,
@@ -25,87 +36,149 @@ const RecordSection = ({ mockData, active, interviewData }) => {
     continuous: true,
     useLegacyResults: false,
   });
-  useEffect(() => {
-    if (results.length > 0) {
-      setAnswer(results.map((result) => result.transcript).join(" "));
-    }
-  }, [results]);
 
   useEffect(() => {
-    if (!isRecording && answer.trim().length > 10 && !loading) {
-      UpdateAnswer();
-    }
-  }, [isRecording, answer, loading]);
+    onBusyChange?.(phase === PHASE.STARTING || phase === PHASE.RECORDING || phase === PHASE.SAVING);
+  }, [phase]);
 
-  const saveAnswer = () => {
-    if (isRecording) {
+  useEffect(() => {
+    if (speechError) {
+      toast.error(speechError, { duration: 3000 });
+    }
+  }, [speechError]);
+
+  useEffect(() => {
+    setPendingAnswer(null);
+    setResults([]);
+    setPhase((current) => (current === PHASE.FAILED ? PHASE.IDLE : current));
+  }, [active]);
+
+  useEffect(() => {
+    if (isRecording && phase === PHASE.STARTING) {
+      clearTimeout(startTimerRef.current);
+      setPhase(PHASE.RECORDING);
+    }
+    if (!isRecording && phase === PHASE.RECORDING) {
+      finishRecording();
+    }
+  }, [isRecording, phase]);
+
+  useEffect(
+    () => () => {
+      clearTimeout(startTimerRef.current);
       stopSpeechToText();
-      if (!mockData || !mockData[active]) {
-        toast("Error: Question data is missing.");
-        setAnswer("");
-        setResults([]);
-        return;
-      }
-      if (answer?.length < 10 && results.length > 0) {
-        console.log(answer + " answer length is less than 10");
-        setLoading(false);
-        toast("Error while saving your answer, Please record again");
-        setAnswer("");
-        setResults([]);
-        return;
-      }
-    } else {
-      startSpeechToText();
-    }
-  };
+    },
+    []
+  );
 
-  const UpdateAnswer = async () => {
+  const startRecording = async () => {
+    if (!questions?.[active]?.question) {
+      toast.error("Question data is missing. Please reload the page.", { duration: 3000 });
+      return;
+    }
+    recordingQuestionRef.current = active;
+    setResults([]);
+    setPendingAnswer(null);
+    setPhase(PHASE.STARTING);
+
+    clearTimeout(startTimerRef.current);
+    startTimerRef.current = setTimeout(() => {
+      stopSpeechToText();
+      setPhase((current) => (current === PHASE.STARTING ? PHASE.IDLE : current));
+      toast.error("Could not access the microphone. Check the mic permission and try again.", { duration: 3000 });
+    }, MIC_START_TIMEOUT_MS);
+
     try {
-      setLoading(true);
-      toast.info("Please wait till your response is saved", { duration: 3000 });
-      const prompt =
-        "Question:" +
-        mockData[active]?.question +
-        ",User Answer" +
-        answer +
-        ",Depends on question and user answer for given question Please give us rating for answer and feedback as area of improvement if any" +
-        "in just 3 to 5 lines to improve it in JSON format with a numeric rating from 1 to 10 and a feedback field";
-
-      const result = await chatSession.sendMessage(prompt);
-
-      const resp = await result.response
-        .text()
-        .replace("```json", "")
-        .replace("```", "");
-      const jresp = JSON.parse(resp);
-      const dbresp = await db.insert(UserAnswer).values({
-        mockIdRef: interviewData?.mockId,
-        question: mockData[active]?.question,
-        correctAns: mockData[active]?.answer,
-        userAns: answer,
-        feedback: jresp?.feedback,
-        rating: jresp?.rating,
-        userEmail: user?.primaryEmailAddress?.emailAddress,
-        createdAt: moment().format("DD-MM-YYYY"),
-      });
-      console.log(answer + " data in db");
-      if (dbresp) {
-        toast.success("User Answer recorded successfully", { duration: 3000 });
-      }
-      setAnswer("");
-      setResults([]);
-      setLoading(false);
-    }
-    catch (e) {
-      toast.warning("Failed saving response, please try again .", { duration: 3000, });
-      setLoading(false);
+      await startSpeechToText();
+    } catch (e) {
+      console.error("Failed to start speech recognition", e);
+      clearTimeout(startTimerRef.current);
+      stopSpeechToText();
+      setPhase(PHASE.IDLE);
+      toast.error("Could not start recording. Please try again.", { duration: 3000 });
     }
   };
+
+  const finishRecording = () => {
+    const transcript = results
+      .map((result) => result.transcript)
+      .join(" ")
+      .trim();
+    setResults([]);
+
+    if (transcript.length < MIN_ANSWER_LENGTH) {
+      setPhase(PHASE.IDLE);
+      toast.warning("We couldn't catch your answer. Please record again.", { duration: 3000 });
+      return;
+    }
+
+    submitAnswer({ questionIndex: recordingQuestionRef.current, userAns: transcript });
+  };
+
+  const submitAnswer = async (entry) => {
+    setPhase(PHASE.SAVING);
+    try {
+      await saveAnswer({ mockId, ...entry });
+      setPendingAnswer(null);
+      setPhase(PHASE.IDLE);
+      toast.success("Answer saved successfully", { duration: 2000 });
+    } catch (e) {
+      console.error("Failed to save answer", e);
+      setPendingAnswer(entry);
+      setPhase(PHASE.FAILED);
+      toast.error("Failed to save your answer. You can retry or record again.", { duration: 3000 });
+    }
+  };
+
+  const onRecordClick = () => {
+    if (phase === PHASE.RECORDING) {
+      stopSpeechToText();
+    } else if (phase === PHASE.IDLE || phase === PHASE.FAILED) {
+      startRecording();
+    }
+  };
+
+  const renderRecordLabel = () => {
+    switch (phase) {
+      case PHASE.STARTING:
+        return (
+          <span className="flex justify-center items-center p-2 text-md">
+            <LoaderCircleIcon className="pr-2 animate-spin" /> Starting microphone...
+          </span>
+        );
+      case PHASE.RECORDING:
+        return (
+          <span className="flex justify-center items-center p-2 text-md text-red-600">
+            <StopCircle className="pr-2" /> Recording ... Click here to stop
+          </span>
+        );
+      case PHASE.SAVING:
+        return (
+          <span className="flex justify-center items-center p-2 text-md">
+            <LoaderCircleIcon className="pr-2 animate-spin" /> Saving your answer...
+          </span>
+        );
+      case PHASE.FAILED:
+        return (
+          <span className="flex justify-center items-center p-2 text-md">
+            <Mic className="pr-2" /> Record Again
+          </span>
+        );
+      default:
+        return (
+          <span className="flex justify-center items-center p-2 text-md">
+            <Mic className="pr-2" /> Record Answer
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="flex items-center justify-center flex-col">
       <div className="flex flex-col mt-20 justify-center items-center">
         <Image
           src={"/webcam1.jpg"}
+          alt="Webcam placeholder"
           width={400}
           height={400}
           className="absolute"
@@ -119,22 +192,27 @@ const RecordSection = ({ mockData, active, interviewData }) => {
           }}
         />
       </div>
-      <Button
-        variant="outlined"
-        disabled={loading}
-        className="my-10 bg-white text-black"
-        onClick={saveAnswer}
-      >
-        {isRecording ? (
-          <h2 className="flex justify-center items-center p-2 text-md text-red-600">
-            <StopCircle className="pr-2" /> Recording ... Click here to stop
-          </h2>
-        ) : (
-          <h2 className="flex justify-center items-center p-2 text-md">
-            <Mic className="pr-2" /> Record Answer
-          </h2>
+      <div className="flex gap-4 my-10">
+        <Button
+          variant="outlined"
+          disabled={Boolean(speechError) || phase === PHASE.STARTING || phase === PHASE.SAVING}
+          className="bg-white text-black"
+          onClick={onRecordClick}
+        >
+          {renderRecordLabel()}
+        </Button>
+        {phase === PHASE.FAILED && pendingAnswer && (
+          <Button
+            variant="outlined"
+            className="bg-white text-black"
+            onClick={() => submitAnswer(pendingAnswer)}
+          >
+            <span className="flex justify-center items-center p-2 text-md">
+              <RotateCcw className="pr-2" /> Retry Saving
+            </span>
+          </Button>
         )}
-      </Button>
+      </div>
     </div>
   );
 };

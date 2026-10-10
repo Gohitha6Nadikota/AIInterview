@@ -1,33 +1,33 @@
 "use client";
 
-import { UserAnswer } from "@/utils/schema";
 import React, { useEffect, useState } from "react";
-import { db } from "@/utils/db";
+import { getFeedback } from "@/utils/actions";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { eq } from "drizzle-orm";
 import { ChevronsDownUpIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 const Feedback = ({ params }) => {
   const [feedbackList, setFeedbackList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    getFeedback();
-  }, []);
+    loadFeedback();
+  }, [params.interviewId]);
 
-  const getFeedback = async () => {
-    const res = await db
-      .select()
-      .from(UserAnswer)
-      .where(eq(UserAnswer.mockIdRef, params.interviewId))
-      .orderBy(UserAnswer.id);
-    setFeedbackList(res);
+  const loadFeedback = async () => {
+    try {
+      setFeedbackList(await getFeedback(params.interviewId));
+    } catch (error) {
+      console.error("Error fetching feedback:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const calculateAverageRating = () => {
@@ -40,7 +40,9 @@ const Feedback = ({ params }) => {
   return (
     <div className="p-10">
       <div className="bg-white text-black p-5 rounded-lg">
-        {feedbackList.length > 0 ? (
+        {loading ? (
+          <h2 className="text-center my-5">Loading feedback...</h2>
+        ) : feedbackList.length > 0 ? (
           <>
             <h2 className="text-2xl font-bold text-green-500">
               Congratulations
@@ -55,8 +57,8 @@ const Feedback = ({ params }) => {
             <h2 className="text-xl text-gray-500 mb-2">
               Find below the feedback and areas of improvement for all questions
             </h2>
-            {feedbackList.map((item, index) => (
-              <Collapsible key={index}>
+            {feedbackList.map((item) => (
+              <Collapsible key={item.id}>
                 <CollapsibleTrigger className="p-2 bg-secondary w-full rounded-lg my-2 gap-7 flex justify-between text-left">
                   {"🤔" + item.question}{" "}
                   <ChevronsDownUpIcon className="h-5 w-5" />
