@@ -27,17 +27,15 @@ const RecordSection = ({ mockData, active, interviewData }) => {
   });
   useEffect(() => {
     if (results.length > 0) {
-      console.log(results + " results");
-      setAnswer(
-        (prevAnswer) =>
-          prevAnswer + " " + results[results.length - 1].transcript
-      );
+      setAnswer(results.map((result) => result.transcript).join(" "));
     }
   }, [results]);
 
   useEffect(() => {
-    if (!isRecording && answer.length > 10) UpdateAnswer();
-  }, [answer]);
+    if (!isRecording && answer.trim().length > 10 && !loading) {
+      UpdateAnswer();
+    }
+  }, [isRecording, answer, loading]);
 
   const saveAnswer = () => {
     if (isRecording) {
@@ -48,7 +46,7 @@ const RecordSection = ({ mockData, active, interviewData }) => {
         setResults([]);
         return;
       }
-      if (answer?.length < 10) {
+      if (answer?.length < 10 && results.length > 0) {
         console.log(answer + " answer length is less than 10");
         setLoading(false);
         toast("Error while saving your answer, Please record again");
@@ -69,7 +67,7 @@ const RecordSection = ({ mockData, active, interviewData }) => {
       ",User Answer" +
       answer +
       ",Depends on question and user answer for given question Please give us rating for answer and feedback as area of improvement if any" +
-      "in just 3 to 5 lines to improve it in JSON format with rating field and feedback field";
+      "in just 3 to 5 lines to improve it in JSON format with a numeric rating from 1 to 10 and a feedback field";
 
     const result = await chatSession.sendMessage(prompt);
 

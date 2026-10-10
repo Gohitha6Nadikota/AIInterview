@@ -32,12 +32,9 @@ const Feedback = ({ params }) => {
 
   const calculateAverageRating = () => {
     if (feedbackList.length === 0) return 0;
-    const total = feedbackList.reduce(
-      (acc, item) => acc + (item.rating || 0),
-      0
-    );
-    const normalized = (total / 25)*10;
-    return normalized.toFixed(1);
+    const ratings = feedbackList.map((item) => Number.parseFloat(item.rating)).filter(Number.isFinite);
+    if (!ratings.length) return "0.0";
+    return (ratings.reduce((total, rating) => total + rating, 0) / ratings.length).toFixed(1);
   };
 
   return (
