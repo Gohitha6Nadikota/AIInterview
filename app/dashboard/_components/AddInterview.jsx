@@ -1,7 +1,6 @@
 "use client";
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { v4 as uuidv4 } from "uuid";
 import {
   Dialog,
   DialogContent,
@@ -10,79 +9,45 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { chatSession } from "@/utils/ai";
+import { createInterview } from "@/utils/actions";
 import { LoaderCircleIcon } from "lucide-react";
-import { db } from "@/utils/db";
-import { MockInterview } from "@/utils/schema";
-import { useUser } from "@clerk/nextjs";
-import moment from "moment/moment";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 function AddInterview() {
   const [isStarted, setStarted] = useState(false);
   const [role, setRole] = useState("");
   const [desc, setDesc] = useState("");
   const [exp, setExp] = useState("");
-  const [response, setResponse] = useState([]);
   const [loading, setLoading] = useState(false);
-  const { user } = useUser();
   const router = useRouter();
 
   const isFormValid =
-    role.trim() !== "" && desc.trim() !== "" && exp.trim() !== "";
+    role.trim() !== "" &&
+    desc.trim() !== "" &&
+    exp.trim() !== "" &&
+    Number.isFinite(Number(exp)) &&
+    Number(exp) >= 0;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!isFormValid) {
-      alert(
-        "Please fill out all fields and make sure experience is a positive number."
-      );
+      toast.warning("Please fill out all fields and make sure experience is a positive number.", { duration: 3000 });
       return;
     }
 
     setLoading(true);
-
-    const input =
-      "Job Position:" +
-      role +
-      " ,Job Description:" +
-      desc +
-      ",Years of Experience: " +
-      exp +
-      ", Depends on this information please give me 5 Interview question with Answered in Json Format, Give Question and Answered as field in JSON. Dont give any additional data or comments in the response only i need the json. Question to be tagged as 'question' and answer as 'answer'";
-
-    const result = await chatSession.sendMessage(input);
-    const resp = result.response
-      .text()
-      .replace("```json", "")
-      .replace("```", "");
-    setResponse(resp);
-
-    if (resp) {
-      const dbresp = await db
-        .insert(MockInterview)
-        .values({
-          mockId: uuidv4(),
-          jsonMockResp: resp,
-          jobPosition: role,
-          jobDescription: desc,
-          jobExperience: exp,
-          createdBy: user?.primaryEmailAddress?.emailAddress,
-          createdAt: moment().format("DD-MM-YYYY"),
-        })
-        .returning({ mockId: MockInterview.mockId });
-
-      if (dbresp) {
-        const mockId = dbresp[0].mockId;
-        setStarted(false);
-        router.push("/dashboard/interview/" + mockId);
-      }
-    } else {
-      console.log("Error in getting response from AI");
+    try {
+      const mockId = await createInterview({ role, desc, exp });
+      setStarted(false);
+      router.push("/dashboard/interview/" + mockId);
+    } catch (error) {
+      console.error("Error creating interview:", error);
+      toast.error("Could not generate interview questions. Please try again.", { duration: 3000 });
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -142,6 +107,7 @@ function AddInterview() {
                     <Input
                       placeholder="Ex. 5"
                       type="number"
+                      min="0"
                       required
                       value={exp}
                       className="text-sm p-3 border border-[#0D92F4]"
@@ -160,10 +126,9 @@ function AddInterview() {
                   </Button>
                   <Button
                     type="submit"
-                    className={`${
-                      !isFormValid ? "bg-[#b2ce63]" : "bg-[#0D92F4]"
-                    } text-xl`}
-                    disabled={!isFormValid}
+                    className={`${!isFormValid ? "bg-[#b2ce63]" : "bg-[#0D92F4]"
+                      } text-xl`}
+                    disabled={!isFormValid || loading}
                   >
                     {loading ? (
                       <LoaderCircleIcon className="animate-spin" />

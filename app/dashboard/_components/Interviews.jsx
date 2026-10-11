@@ -1,10 +1,8 @@
 "use client";
 
-import { db } from "@/utils/db";
-import { MockInterview } from "@/utils/schema";
+import { listInterviews } from "@/utils/actions";
 import { useUser } from "@clerk/nextjs";
 import React, { useEffect, useState } from "react";
-import { eq, desc } from "drizzle-orm";
 import InterviewCard from "./InterviewCard";
 
 const Interviews = () => {
@@ -14,15 +12,11 @@ const Interviews = () => {
     user && getList();
   }, [user]);
   const getList = async () => {
-    const res = await db
-      .select()
-      .from(MockInterview)
-      .where(
-        eq(MockInterview.createdBy, user?.primaryEmailAddress?.emailAddress)
-      )
-      .orderBy(desc(MockInterview.id));
-
-    setList(res);
+    try {
+      setList(await listInterviews());
+    } catch (error) {
+      console.error("Error fetching interviews:", error);
+    }
   };
 
   return (
@@ -32,8 +26,8 @@ const Interviews = () => {
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 my-3">
         {list.length > 0 &&
-          list.map((item, index) => (
-            <InterviewCard interview={item} key={index} />
+          list.map((item) => (
+            <InterviewCard interview={item} key={item.id} />
           ))}
       </div>
     </div>
